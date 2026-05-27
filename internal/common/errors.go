@@ -26,6 +26,14 @@ func NotFound(msg ...string) *AppError {
 	return &AppError{Status: http.StatusNotFound, Message: msg[0]}
 }
 
+// AlreadyExists — ошибка 409 с произвольным сообщением.
+func AlreadyExists(msg ...string) *AppError {
+	if len(msg) == 0 {
+		msg = []string{"already exists"}
+	}
+	return &AppError{Status: http.StatusConflict, Message: msg[0]}
+}
+
 // InternalError — ошибка 500 с произвольным сообщением.
 func InternalError(msg ...string) *AppError {
 	if len(msg) == 0 {

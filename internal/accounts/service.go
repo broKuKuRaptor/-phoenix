@@ -1,34 +1,42 @@
 package accounts
 
 import (
+	"context"
+
 	"phoenix/internal/common"
 )
 
+// AccountService — сервисный слой для работы со счетами.
 type AccountService struct {
-	// Здесь могут быть зависимости, например, репозитории для доступа к данным
+	store Store
 }
 
-// NewService создает новый экземпляр AccountService
-func NewService() *AccountService {
-	return &AccountService{}
+// NewService создает новый экземпляр AccountService.
+func NewService(store Store) *AccountService {
+	return &AccountService{store: store}
 }
 
-// ListAccounts возвращает список всех аккаунтов
-func (s *AccountService) ListAccounts() ([]Account, error) {
-	var accounts []Account = sampleAccounts
-	return accounts, nil
+// Create создаёт новый счёт.
+func (s *AccountService) Create(ctx context.Context, key AccountKey) (*Account, error) {
+	return s.store.Create(ctx, key)
 }
 
-// GetAccountsByOwner возвращает список аккаунтов, принадлежащих указанному владельцу
-func (s *AccountService) GetAccountsByOwner(ownerId common.UID) ([]Account, error) {
-	// var accounts []Account = ACCOUNTS
-	// return accounts, nil
-	return nil, common.NotFound("Accounts not found for owner_id: " + ownerId.String())
+// ListAccounts возвращает список всех аккаунтов с пагинацией.
+func (s *AccountService) ListAccounts(ctx context.Context, offset, limit int) ([]Account, error) {
+	return s.store.List(ctx, offset, limit)
 }
 
-// GetAccountByOwnerAndSymbol возвращает аккаунт, принадлежащий указанному владельцу по заданной валюте
-func (s *AccountService) GetAccountByOwnerAndSymbol(ownerId common.UID, symbol string) (*Account, error) {
-	// var account *Account = &ACCOUNTS[0]
-	// return account, nil
-	return nil, common.NotFound("Account not found for owner_id: " + ownerId.String() + " and symbol: `" + symbol + "`")
+// GetAccountsByOwner возвращает список аккаунтов, принадлежащих указанному владельцу.
+func (s *AccountService) GetAccountsByOwner(ctx context.Context, ownerId common.UID) ([]Account, error) {
+	return s.store.ByOwner(ctx, ownerId)
+}
+
+// GetAccountByOwnerAndSymbol возвращает аккаунт по owner_id и символу.
+func (s *AccountService) GetAccountByOwnerAndSymbol(ctx context.Context, ownerId common.UID, symbol string) (*Account, error) {
+	return s.store.ByKey(ctx, ownerId, symbol)
+}
+
+// GetAccountByKey возвращает аккаунт по ключу (owner_id + symbol).
+func (s *AccountService) GetAccountByKey(ctx context.Context, key AccountKey) (*Account, error) {
+	return s.GetAccountByOwnerAndSymbol(ctx, key.OwnerId, key.Symbol)
 }

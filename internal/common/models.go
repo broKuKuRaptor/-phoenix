@@ -1,6 +1,7 @@
 package common
 
 import (
+	"database/sql/driver"
 	"encoding/hex"
 	"fmt"
 )
@@ -26,6 +27,28 @@ func (u *UID) UnmarshalJSON(data []byte) error {
 	}
 	_, err := hex.Decode(u[:], []byte(s))
 	return err
+}
+
+// Scan реализует sql.Scanner — TEXT → UID.
+func (u *UID) Scan(value any) error {
+	if value == nil {
+		return fmt.Errorf("cannot scan nil into UID")
+	}
+	var s string
+	switch v := value.(type) {
+	case string:
+		s = v
+	case []byte:
+		s = string(v)
+	default:
+		return fmt.Errorf("cannot scan %T into UID", value)
+	}
+	return u.UnmarshalJSON([]byte(`"` + s + `"`))
+}
+
+// Value реализует driver.Valuer — UID → TEXT.
+func (u UID) Value() (driver.Value, error) {
+	return u.String(), nil
 }
 
 // ParseUID преобразует hex-строку в UID.
