@@ -2,28 +2,29 @@ package accounts
 
 import (
 	"net/http"
+	types "phoenix/internal/common/types"
 	"phoenix/internal/common"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
 
-// getCurrencyRoutes handles GET /v1/currencies/{symbol}.
+
+// getCurrencies handles GET /v1/currencies.
 //
 // Error discrimination:
-//   - err != nil && routes == nil → 500 (unexpected internal error)
-//   - err != nil && routes != nil → 404 (symbol not supported)
-func getCurrencyRoutes(w http.ResponseWriter, r *http.Request, s AccountService) error {
-	symbol := strings.ToUpper(chi.URLParam(r, "symbol"))
-	if routes, err := s.GetCurrencyRoutes(r.Context(), symbol); err != nil {
-		if routes == nil {
+//   - err != nil && currencies == nil → 500 (unexpected internal error)
+//   - err != nil && currencies != nil → 404 (no currencies configured)
+func getCurrencies(w http.ResponseWriter, r *http.Request, s AccountService) error {
+	if currencies, err := s.GetCurrencies(r.Context()); err != nil {
+		if currencies == nil {
 			return common.RespondError(w, http.StatusInternalServerError, err)
 		}
 		return common.RespondError(w, http.StatusNotFound, err)
 	} else {
-		return common.RespondJSON(w, http.StatusOK, routes)
+		return common.RespondJSON(w, http.StatusOK, currencies)
 	}
 }
+
 
 // getAccountCurrencies handles GET /v1/accounts/{owner_id}/currencies.
 //
@@ -33,7 +34,7 @@ func getCurrencyRoutes(w http.ResponseWriter, r *http.Request, s AccountService)
 //   - err != nil && currencies != nil → 404 (account not found)
 func getAccountCurrencies(w http.ResponseWriter, r *http.Request, s AccountService) error {
 	ownerId := chi.URLParam(r, "owner_id")
-	if uid, err := common.ParseUID(ownerId); err != nil {
+	if uid, err := types.ParseUID(ownerId); err != nil {
 		return common.RespondError(w, http.StatusBadRequest, err)
 	} else {
 		if currencies, err := s.GetAccountCurrencies(r.Context(), uid); err != nil {
@@ -51,15 +52,14 @@ func getAccountCurrencies(w http.ResponseWriter, r *http.Request, s AccountServi
 //
 // Endpoints:
 //
-//	GET /v1/currencies/{symbol}            – supported routes for a currency
+//	GET /v1/currencies                      – all supported currencies and their routes
 //	GET /v1/accounts/{owner_id}/currencies  – currencies enabled on an account
 //
-// Mount under a service prefix, e.g. r.Mount("/api/accounts", svc.Routes()).
 func (s AccountService) Routes() chi.Router {
 	r := chi.NewRouter()
 	r.Route("/v1", func(r chi.Router) {
-		r.Get("/currencies/{symbol}", func(w http.ResponseWriter, r *http.Request) {
-			getCurrencyRoutes(w, r, s)
+		r.Get("/currencies", func(w http.ResponseWriter, r *http.Request) {
+			getCurrencies(w, r, s)	
 		})
 		r.Get("/accounts/{owner_id}/currencies", func(w http.ResponseWriter, r *http.Request) {
 			getAccountCurrencies(w, r, s)
@@ -67,3 +67,4 @@ func (s AccountService) Routes() chi.Router {
 	})
 	return r
 }
+

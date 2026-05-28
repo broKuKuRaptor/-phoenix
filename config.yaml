@@ -4,3 +4,16 @@ accounts:
   address:
     host: 127.0.0.1
     port: 9000
+  currensies:
+    - ETH:
+    - TRX:
+    - USD(T):
+        - network: ETH
+          token: USDT
+        - network: TRX
+          token: USDT
+    - RUB(A7A5):
+        - network: ETH
+          token: A7A5
+        - network: TRX
+          token: A7A5

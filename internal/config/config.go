@@ -19,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 
+	ct "phoenix/internal/common/types"
+
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
@@ -70,6 +72,9 @@ func Load(serviceName string) (*Config, error) {
 			configPath = envPath
 		}
 	}
+	if configPath == "" {
+		configPath = "config.yaml"
+	}
 
 	// Load YAML file
 	k := koanf.New(".")
@@ -114,6 +119,61 @@ func (c *Config) Int(key string) int {
 // Exists checks whether a key is present in the config.
 func (c *Config) Exists(key string) bool {
 	return c.k.Exists(key)
+}
+
+// Currencies parses the "currensies" section into a slice of Currency.
+//
+// Expected YAML shape:
+//
+//	currensies:
+//	  - ETH:                    # native coin → route = itself
+//	  - USD(T):
+//	      - network: ETH
+//	        token: USDT
+func (c *Config) Currencies() ([]ct.Currency, error) {
+	raw := c.k.Get("currensies")
+	if raw == nil {
+		return nil, nil
+	}
+
+	list, ok := raw.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("currensies: expected a list, got %T", raw)
+	}
+
+	var currencies []ct.Currency
+	for _, item := range list {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("currensies: expected map, got %T", item)
+		}
+		for symbol, val := range m {
+			curr := ct.Currency{Symbol: symbol}
+			if val == nil {
+				// Native coin: its only route is itself.
+				curr.Routes = []ct.CurrencyRoute{
+					{Network: symbol, Token: symbol},
+				}
+			} else {
+				routesList, ok := val.([]interface{})
+				if !ok {
+					return nil, fmt.Errorf("currensies.%s: expected list of routes, got %T", symbol, val)
+				}
+				for _, r := range routesList {
+					rm, ok := r.(map[string]interface{})
+					if !ok {
+						return nil, fmt.Errorf("currensies.%s: expected route map, got %T", symbol, r)
+					}
+					curr.Routes = append(curr.Routes, ct.CurrencyRoute{
+						Network: rm["network"].(string),
+						Token:   rm["token"].(string),
+					})
+				}
+			}
+			currencies = append(currencies, curr)
+		}
+	}
+	return currencies, nil
 }
 
 // ---------------------------------------------------------------------------

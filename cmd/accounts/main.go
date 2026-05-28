@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 
-	"phoenix/internal/config"
 	"phoenix/internal/accounts"
-	
+	"phoenix/internal/config"
+
 	"github.com/go-chi/chi/v5"
 )
 
@@ -23,6 +23,9 @@ type AccountsConfig struct {
 	} `koanf:"address"`
 }
 
+// main is the entry point for the accounts service. It loads configuration,
+// initializes the AccountService with currencies from config, mounts HTTP
+// routes, and starts the server.
 func main() {
 	// Load config, scoped to the "accounts" service section.
 	// CLI overrides like --address.port=9090 are applied automatically.
@@ -37,10 +40,13 @@ func main() {
 	}
 
 	router := chi.NewRouter()
-	accountsService := accounts.NewAccountService()
+	currencies, err := cfg.Currencies()
+	if err != nil {
+		log.Fatalf("currencies: %v", err)
+	}
+	accountsService := accounts.NewAccountService(currencies)
 	router.Mount("/api/accounts", accountsService.Routes())
 
-	
 	addr := fmt.Sprintf("%s:%d", ac.Address.Host, ac.Address.Port)
 	log.Printf("Accounts server running at http://%s (db: %s)", addr, ac.Database.URL)
 	if err := http.ListenAndServe(addr, router); err != nil {
