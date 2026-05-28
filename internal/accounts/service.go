@@ -1,9 +1,23 @@
 package accounts
 
-import "context"
+import (
+	"context"
+	"errors"
+	"phoenix/internal/common"
+)
 
 // AccountService provides account-scoped operations such as querying
 // supported currencies and their available (network, token) routes.
+//
+// # Error conventions
+//
+// Methods return both a result slice and an error. Handlers use this
+// combination to decide the HTTP status code:
+//
+//	result, err     → meaning
+//	data,    nil    → 200 OK
+//	[]T{},   err   → 404 Not Found (entity missing but payload valid)
+//	nil,     err   → 500 Internal Server Error
 type AccountService struct {
 	// TODO: Add fields for database connection, logger, etc.
 }
@@ -15,7 +29,8 @@ func NewAccountService() *AccountService {
 
 // GetCurrencyRoutes returns the list of (network, token) pairs through which
 // the service supports operations for the given currency symbol.
-// Returns an empty slice if the symbol is unknown.
+//
+// An unknown symbol returns an empty slice with no error (HTTP 200 with []).
 func (s *AccountService) GetCurrencyRoutes(_ctx context.Context, symbol string) ([]CurrencyRoute, error) {
 	switch symbol {
 	case "USDT":
@@ -32,49 +47,38 @@ func (s *AccountService) GetCurrencyRoutes(_ctx context.Context, symbol string) 
 			{Coin: "TRX", Token: "TRX"},
 		}, nil
 	}
+	// return nil, errors.New("Some others error")
 	return []CurrencyRoute{}, nil
 }
 
 // GetAccountCurrencies returns the currencies supported on the account
 // linked to ownerId, each with its available CurrencyRoutes.
 //
-// When symbols are provided, the result is filtered to only those currencies.
-// An empty symbols list returns all supported currencies.
-func (s *AccountService) GetAccountCurrencies(_ctx context.Context, _ownerId string, symbols ...string) ([]AccountCurrency, error) {
-	all := []AccountCurrency{
-		{
-			Symbol: "ETH",
-			Routes: []CurrencyRoute{
-				{Coin: "ETH", Token: "ETH"},
+// An unknown ownerId returns an empty slice with an error (HTTP 404).
+func (s *AccountService) GetAccountCurrencies(_ctx context.Context, ownerId common.UID) ([]AccountCurrency, error) {
+	if ownerId.String() == "0000000000000000000000000000000000" {
+		return []AccountCurrency{
+			{
+				Symbol: "ETH",
+				Routes: []CurrencyRoute{
+					{Coin: "ETH", Token: "ETH"},
+				},
 			},
-		},
-		{
-			Symbol: "TRX",
-			Routes: []CurrencyRoute{
-				{Coin: "TRX", Token: "TRX"},
+			{
+				Symbol: "TRX",
+				Routes: []CurrencyRoute{
+					{Coin: "TRX", Token: "TRX"},
+				},
 			},
-		},
-		{
-			Symbol: "USDT",
-			Routes: []CurrencyRoute{
-				{Coin: "ETH", Token: "USDT"},
-				{Coin: "TRX", Token: "USDT"},
+			{
+				Symbol: "USDT",
+				Routes: []CurrencyRoute{
+					{Coin: "ETH", Token: "USDT"},
+					{Coin: "TRX", Token: "USDT"},
+				},
 			},
-		},
+		}, nil
 	}
-
-	if len(symbols) == 0 {
-		return all, nil
-	}
-
-	filtered := make([]AccountCurrency, 0, len(symbols))
-	for _, symbol := range symbols {
-		for _, ac := range all {
-			if ac.Symbol == symbol {
-				filtered = append(filtered, ac)
-				break
-			}
-		}
-	}
-	return filtered, nil
+	// return nil, errors.New("Some others error")
+	return []AccountCurrency{}, errors.New("account not found")
 }

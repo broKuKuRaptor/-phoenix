@@ -3,8 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 
 	"phoenix/internal/config"
+	"phoenix/internal/accounts"
+	
+	"github.com/go-chi/chi/v5"
 )
 
 // AccountsConfig mirrors the "accounts" section of config.yaml.
@@ -32,6 +36,14 @@ func main() {
 		log.Fatalf("unmarshal: %v", err)
 	}
 
-	fmt.Printf("Database URL: %s\n", ac.Database.URL)
-	fmt.Printf("Address:      %s:%d\n", ac.Address.Host, ac.Address.Port)
+	router := chi.NewRouter()
+	accountsService := accounts.NewAccountService()
+	router.Mount("/api/accounts", accountsService.Routes())
+
+	
+	addr := fmt.Sprintf("%s:%d", ac.Address.Host, ac.Address.Port)
+	log.Printf("Accounts server running at http://%s (db: %s)", addr, ac.Database.URL)
+	if err := http.ListenAndServe(addr, router); err != nil {
+		log.Fatal(err)
+	}
 }

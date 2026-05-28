@@ -20,14 +20,20 @@ package accounts
 //
 // Coin identifies the blockchain network; Token identifies the contract
 // on that network. For native coins Coin and Token are equal.
+//
+// Examples:
+//
+//	{Coin: "ETH", Token: "ETH"}   – native ETH on Ethereum
+//	{Coin: "ETH", Token: "USDT"}  – USDT as ERC-20 on Ethereum
+//	{Coin: "TRX", Token: "USDT"}  – USDT as TRC-20 on Tron
 type CurrencyRoute struct {
-	Coin  string // Blockchain network (native coin symbol)
-	Token string // Token contract on that network
+	Coin  string `json:"coin"`  // Blockchain network (native coin symbol)
+	Token string `json:"token"` // Token contract on that network
 }
 
 // AccountCurrency defines which currency is supported on a user account
 // and through which CurrencyRoutes operations can be performed.
 type AccountCurrency struct {
-	Symbol string          // Currency code
-	Routes []CurrencyRoute // Supported (network, token) pairs
+	Symbol string          `json:"symbol"` // Currency code (e.g. "USDT", "ETH")
+	Routes []CurrencyRoute `json:"routes"` // Supported (network, token) pairs
 }
