@@ -5,40 +5,45 @@ import (
 	"os"
 
 	"github.com/spf13/viper"
-	"go.yaml.in/yaml/v3"
+	"gopkg.in/yaml.v3"
 )
 
-// loadConfigFile загружает в viper конфигурацию из указанного файла.
-// Если в корне есть ключ с именем sectionKey, загружает его содержимое, иначе загружает файл как есть.
+// loadConfigFromFile загружает в Viper конфигурацию из указанного YAML-файла.
+// Если в корне YAML-документа есть ключ sectionKey (например, "accounts"),
+// загружается только содержимое этой секции; иначе файл загружается целиком.
 func loadConfigFromFile(cfgPath, sectionKey string) error {
-	var raw map[string]any
-	if data, err := os.ReadFile(cfgPath); err == nil {
-		if err := yaml.Unmarshal(data, &raw); err != nil {
-			return fmt.Errorf("Failed to parse config file: %v", err)
-		}
-	} else {
-		return fmt.Errorf("Failed to read config file: %v", err)
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		return fmt.Errorf("failed to read config file: %w", err)
 	}
-	// Если в корне есть ключ с указанным именем — сохраняем его содержимое во временный файл и загружаем его через viper.
+
+	var raw map[string]any
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("failed to parse YAML: %w", err)
+	}
+
+	// Если в корне есть ключ sectionKey — извлекаем только эту секцию
 	if section, ok := raw[sectionKey]; ok {
 		sectionData, err := yaml.Marshal(section)
 		if err != nil {
-			return fmt.Errorf("Failed to marshal accounts section: %v", err)
+			return fmt.Errorf("failed to serialize section %s: %w", sectionKey, err)
 		}
+
 		tmpFile, err := os.CreateTemp("", "*.yaml")
 		if err != nil {
-			return fmt.Errorf("Failed to create temp config file: %v", err)
+			return fmt.Errorf("failed to create temp file: %w", err)
 		}
+		defer os.Remove(tmpFile.Name())
+
 		if _, err := tmpFile.Write(sectionData); err != nil {
 			tmpFile.Close()
-			os.Remove(tmpFile.Name())
-			return fmt.Errorf("Failed to write temp config file: %v", err)
+			return fmt.Errorf("failed to write temp file: %w", err)
 		}
 		tmpFile.Close()
+
 		cfgPath = tmpFile.Name()
-		defer os.Remove(tmpFile.Name())
 	}
-	//  Если ключа нет — загружаем файл как есть.
+
 	viper.SetConfigFile(cfgPath)
 	return viper.ReadInConfig()
 }
