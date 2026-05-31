@@ -1,0 +1,12 @@
+common:
+  database:
+    url: "sql:///:memory:"
+  http:
+    read_timeout: 20
+    write_timeout: 20
+
+accounts:
+  address:
+    host: localhost
+    port: 8888
+
