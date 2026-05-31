@@ -1,13 +1,16 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
-	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
-	"phoenix/internal/accounts"
+	service "phoenix/internal/accounts"
 	"phoenix/internal/config"
+	"phoenix/pkg/apiserver"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -15,26 +18,52 @@ import (
 
 // main — точка входа в сервис учётных записей.
 func main() {
+	// Загрузка конфигурации
 	cfg, err := config.GetAccountsConfig()
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// Запуск основного сервиса
+	service, err := service.NewAccountsService(cfg)
+	if err != nil {
+		log.Fatalf("Failed to start accounts server: %v", err)
+	}
+	log.Printf("Accounts service started successful")
+
 	router := chi.NewRouter()
-	// Middleware
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(30 * time.Second))
 
 	// Монтирование маршрутов сервиса
-	service := accounts.NewService(cfg)
-	router.Mount("/api/accounts", service.Routes())
+	router.Mount("/api/accounts", service.AccountsRouterV1())
+	router.Mount("/api/currencies", service.CurrenciesRouterV1())
 
 	// Запуск сервера
-	addr := fmt.Sprintf("%s:%d", cfg.Address.Host, cfg.Address.Port)
-	log.Printf("service started on %s", addr)
-	if err := http.ListenAndServe(addr, router); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("failed to start server: %v", err)
-	}	
-	log.Print("server stopped")
+	apiServer, err := apiserver.CreateAndStart(*cfg, router)
+	if err != nil {
+		log.Fatalf("failed to start API server: %v", err)
+	}
+	log.Printf("API service started on %s", apiServer.Address())
+
+	// Ожидаю системных сигналов завершения
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit // Блокируемся здесь, пока не придет сигнал завершения
+
+	// Создаю контекст с таймаутом 10 сек для завершения API сервера и основного сервиса
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := apiServer.Shutdown(ctx); err != nil {
+		log.Printf("Error while API server stopping: %v", err)
+	}
+	log.Print("API server stopped")
+
+	if err := service.Shutdown(ctx); err != nil {
+		log.Printf("Error while accounts server stopping: %v", err)
+	}
+	log.Print("Account server stopped")
+
 }

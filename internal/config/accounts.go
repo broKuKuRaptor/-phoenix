@@ -21,6 +21,12 @@ type AccountsConfig struct {
 		Host string `mapstructure:"host"`
 		Port int    `mapstructure:"port"`
 	} `mapstructure:"address"`
+
+	// Параметры HTTP сервера
+	HTTP struct {
+		ReadTimeout  int `mapstructure:"read_timeout"`
+		WriteTimeout int `mapstructure:"write_timeout"`
+	} `mapstructure:"http"`
 }
 
 // init регистрирует флаги командной строки, связывает их с Viper,

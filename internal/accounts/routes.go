@@ -5,66 +5,62 @@ import (
 	"fmt"
 	"net/http"
 
-	"phoenix/internal/types"
 	"phoenix/internal/utils"
 
 	"github.com/go-chi/chi/v5"
 )
 
-// Routes возвращает маршруты для сервиса учётных записей.
+// AccountsRouterV1 возвращает маршруты CRUD учётных записей.
 // Определяет конечные точки REST API с префиксом /v1:
-//   GET    /         — список всех учётных записей
-//   GET    /{id}     — получение учётной записи по owner_id
-//   POST   /         — создание новой учётной записи
-func (s *AccountsService) Routes() chi.Router {
+//
+//	GET    /         — список всех учётных записей
+//	GET    /{id}     — получение учётной записи по owner_id
+//	POST   /         — создание новой учётной записи
+func (s *AccountsService) AccountsRouterV1() chi.Router {
 	r := chi.NewRouter()
 	r.Route("/v1", func(r chi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			listAccountsHandler(w, r, s)
+			utils.RespondError(w, http.StatusNotImplemented, errors.New("get accounts list: not yet implemented"))
 		})
 		r.Get("/{owner_id}", func(w http.ResponseWriter, r *http.Request) {
-			getAccountsHandler(w, r, s)
+			utils.RespondError(w, http.StatusNotImplemented, errors.New("get account info: not yet implemented"))
 		})
 		r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			createAccountHandler(w, r, s)
+			utils.RespondError(w, http.StatusNotImplemented, errors.New("create account: not yet implemented"))
 		})
 	})
 	return r
 }
 
-// listAccountsHandler обрабатывает GET-запрос на получение списка всех учётных записей.
-func listAccountsHandler(w http.ResponseWriter, r *http.Request, ac *AccountsService) {
-	accounts, err := ac.getAccounts()
-	if err != nil {
-		utils.RespondError(w, http.StatusInternalServerError, err)
-		return
-	}
-	utils.RespondJSON(w, http.StatusOK, accounts)
-}
+// CurrenciesRouterV1 возвращает маршруты получения информация о типе и статусе поддержки сервисом валют.
+// Определяет конечные точки REST API с префиксом /v1:
+//
+//	GET    /             — информация по всем валютам
+//	GET    /{symbol}     — информация по заданной валюте
+func (s *AccountsService) CurrenciesRouterV1() chi.Router {
+	r := chi.NewRouter()
+	r.Route("/v1", func(r chi.Router) {
 
-// getAccountsHandler обрабатывает GET-запрос на получение учётной записи по owner_id.
-func getAccountsHandler(w http.ResponseWriter, r *http.Request, ac *AccountsService) {
-	ownerIDStr := chi.URLParam(r, "owner_id")
-	ownerID, err := types.ParseUID(ownerIDStr)
-	if err != nil {
-		utils.RespondError(w, http.StatusBadRequest, errors.New("wrong owner_id parameter"))
-		return
-	}
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			if result, err := s.GetCurrenciesSupportStatus(); err == nil {
+				utils.RespondJSON(w, http.StatusOK, result)
+			} else {
+				utils.RespondError(w, http.StatusInternalServerError, err)
+			}
+		})
 
-	account, err := ac.getAccount(ownerID)
-	if err != nil {
-		utils.RespondError(w, http.StatusInternalServerError, err)
-		return
-	}
-	if account == nil {
-		utils.RespondError(w, http.StatusNotFound, fmt.Errorf("account %s not found", ownerID))
-		return
-	}
-	utils.RespondJSON(w, http.StatusOK, account)
-}
-
-// createAccountHandler обрабатывает POST-запрос на создание новой учётной записи.
-// В текущей реализации — заглушка.
-func createAccountHandler(w http.ResponseWriter, r *http.Request, ac *AccountsService) {
-	utils.RespondError(w, http.StatusNotImplemented, errors.New("create account: not yet implemented"))
+		r.Get("/{symbol}", func(w http.ResponseWriter, r *http.Request) {
+			symbol := chi.URLParam(r, "symbol")
+			if result, err := s.GetCurrenciesSupportStatus(symbol); err == nil {
+				if len(result) > 0 {
+					utils.RespondJSON(w, http.StatusOK, result[0])
+				} else {
+					utils.RespondError(w, http.StatusNotFound, fmt.Errorf("information for currency %s not found", symbol))
+				}
+			} else {
+				utils.RespondError(w, http.StatusInternalServerError, err)
+			}
+		})
+	})
+	return r
 }
