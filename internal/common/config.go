@@ -1,4 +1,4 @@
-package config
+package common
 
 // CommonConfig описывает общие настройки для всех сервисов.
 type CommonConfig struct {
@@ -13,4 +13,15 @@ type CommonConfig struct {
 		ReadTimeout  int `mapstructure:"read_timeout"`
 		WriteTimeout int `mapstructure:"write_timeout"`
 	} `mapstructure:"http"`
+}
+
+// ServiceConfig содержит настройки специфичные для сервисов.
+type ServiceConfig struct {
+	CommonConfig `mapstructure:",squash"`
+
+	// Address содержит настройки сетевого адреса сервиса.
+	Address struct {
+		Host string `mapstructure:"host"`
+		Port int    `mapstructure:"port"`
+	} `mapstructure:"address"`
 }
