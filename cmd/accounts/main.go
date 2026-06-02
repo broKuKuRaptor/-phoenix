@@ -26,6 +26,8 @@ func init() {
 	pflag.Int("address.port", 9000, "Port of service address")
 	pflag.Int("http.read_timeout", 10, "HTTP Read timeout")
 	pflag.Int("http.write_timeout", 10, "HTTP Write timeout")
+	pflag.String("amqp.url", "amqp://guest:guest@localhost:5672/", "AMQP broker URL")
+	pflag.String("amqp.exchange", "phoenix.events", "AMQP topic exchange name")
 	pflag.Parse()
 
 	if err := viper.BindPFlags(pflag.CommandLine); err != nil {

@@ -4,9 +4,17 @@ common:
   http:
     read_timeout: 20
     write_timeout: 20
+  amqp:
+    url: "amqp://guest:guest@localhost:5672/"
+    exchange: "phoenix.events"
 
 accounts:
   address:
     host: localhost
     port: 8888
+
+currency:
+  address:
+    host: localhost
+    port: 9001
 

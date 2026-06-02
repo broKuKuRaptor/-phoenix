@@ -13,6 +13,12 @@ type CommonConfig struct {
 		ReadTimeout  int `mapstructure:"read_timeout"`
 		WriteTimeout int `mapstructure:"write_timeout"`
 	} `mapstructure:"http"`
+
+	// Amqp содержит настройки подключения к RabbitMQ.
+	Amqp struct {
+		URL      string `mapstructure:"url"`
+		Exchange string `mapstructure:"exchange"`
+	} `mapstructure:"amqp"`
 }
 
 // ServiceConfig содержит настройки специфичные для сервисов.

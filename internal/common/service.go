@@ -20,7 +20,21 @@ func NewBaseService() *BaseService {
 	return &BaseService{ctx: ctx, cancel: cancel}
 }
 
-// startPeriodicTask — запускает периодическую задачу
+// StartBackgroundTask запускает фоновую задачу, прерываемую при отмене контекста сервиса.
+func (b *BaseService) StartBackgroundTask(task func(ctx context.Context)) {
+	b.wg.Add(1)
+	go func() {
+		defer b.wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("Background task failed: %v\n", r)
+			}
+		}()
+		task(b.ctx)
+	}()
+}
+
+// StartPeriodicTask — запускает периодическую задачу
 func (b *BaseService) StartPeriodicTask(periodic_task func(), interval time.Duration) {
 	b.wg.Add(1)
 	ticker := time.NewTicker(interval)
