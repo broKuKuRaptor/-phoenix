@@ -1,0 +1,19 @@
+common:
+  database:
+    url: "sql:///:memory:"
+  http:
+    read_timeout: 20
+    write_timeout: 20
+  amqp:
+    url: "amqp://guest:guest@rabbitmq:5672/"
+    exchange: "phoenix.events"
+
+accounts:
+  address:
+    host: "0.0.0.0"
+    port: 8888
+
+currency:
+  address:
+    host: "0.0.0.0"
+    port: 9001

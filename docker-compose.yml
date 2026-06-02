@@ -1,0 +1,45 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_listener", "5672"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  accounts:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CMD_PATH: ./cmd/accounts
+    image: phoenix-accounts:local
+    command: ["-c", "/etc/phoenix/config.yaml"]
+    volumes:
+      - ./deploy/config.docker.yaml:/etc/phoenix/config.yaml:ro
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+
+  currency:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CMD_PATH: ./cmd/currency
+    image: phoenix-currency:local
+    command: ["-c", "/etc/phoenix/config.yaml"]
+    volumes:
+      - ./deploy/config.docker.yaml:/etc/phoenix/config.yaml:ro
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
